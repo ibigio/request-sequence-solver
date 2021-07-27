@@ -1,0 +1,119 @@
+Request
+- contains Symbols
+- contains the Response
+
+Response
+- is tied to a Request
+
+Symbol: name and value
+- name represents location of Symbol in Request/Response
+- value represents 
+- can depend on a Response
+
+RequestSymbol
+ResponseSymbol ?
+
+
+=== Types and Shapes ===
+
+== For HAR:
+
+Request:
+- ['headers']:              [ {"name": name , "value": value } ]
+- ['cookies']:              [ {"name": name , "value": value } ]
+- ['queryString']:          [ {"name": name , "value": value } ]
+- ['postData']['params']:   [ {"name": name , "value": value } ]
+shit, or also 
+- ['postData']['text']:   JSON string
+
+Response:
+- ['cookies']:              [ {"name": name , "value": value } ]
+- ['content']['text']:      JSON string
+    ^ might need to handle
+      different encodings...
+
+== For python request:
+
+Request:
+- headers=      {name: value}
+- cookies=      {name: value}
+- params=       {name: value}
+- data=         {name: value} or JSON
+
+Response:
+- r.cookies     [(name=name, value=value)]
+
+
+=== Maps ===
+
+# RequestSymbols
+
+All Request Values: dict[value -> [symbols ids...]]
+- key: value in request e.g. 'bearer123', '672430PKLBWY6038'
+- value: symbol ids with that value
+
+All Request Symbols: dict[symbol id -> symbol]
+- key: symbol id
+- value:
+    - request_id:       e.g. 1
+    - location_path:    e.g. ['postData', 'params']
+    - name:             e.g. 'Auth', 'username'
+    - potential_dependencies: (i.e. list of ResponseSymbols)
+
+# ResponseSymbols
+
+All Response Symbols: dict[symbol id -> symbol]
+- key: symbol id
+- value:
+    - request_id:       e.g. 1
+    - location_path:    e.g. ['postData', 'params']
+    - type:             e.g. name/value or json
+    - name:             e.g. 'Auth', 
+
+#  Requests
+
+Requests: [request id -> request]
+- method        e.g. "GET", "POST"
+- url           e.g. https://www.verizon.com/
+- symbols       i.e. RequestSymbols
+
+=== Algorithm ===
+
+- iterate over HAR requests
+- for each request:
+    - generate request id
+    - create Request and add it to Requests map, keyed by id
+    - Step I 
+    - Step II
+        - (?) and for each symbol add it to request
+
+
+How to build the dependency graph:
+Start with final Request or Response ()
+
+I. Response Symbol Extraction Step
+    1. determine all values provided by Response, e.g. 'cookies', content json
+    2. for each value "v"
+        - create a new ResponseSymbol
+        for each RequestSymbol mapped to by "v"
+            - add ResponseSymbol to ResponseSymbol's potential_dependencies
+
+
+II. Request Symbol Extraction Step
+    1. determine all values required to make Request, e.g. in 'headers', 'cookies'
+    2. for each value "v"
+        - create a new RequestSymbol
+        - add RequestSymbol to Request Values map, keyed by "v"
+        - (?) add it Request Symbols map, keyed by id
+
+
+
+=== Ideas ===
+- should probably do symbol coallescing if identical values and paths. more complicated case for identical ResponseSymbol paths but changing value...
+- to determine which ResponseSymbol best fits a RequestSymbol, have ranking based on recency, path similarity, other clever things? (gather mutliple HARs of same action and look at which symbols are different always, or graph similarity, etc.)
+
+=== Scratch ===
+
+A = [e for e in entries if e['response']['content']['mimeType'].lower().find('json') != -1 and 'text' in e['response']['content'] and e['response']['content']['text']]
+
+A = len([e for e in entries if 'postData' in e['request']])
